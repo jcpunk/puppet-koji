@@ -1,0 +1,121 @@
+#####################################################
+#### File managed with puppet                      ###
+#### Generated for <%= @fqdn %>
+######################################################
+## Served by:        '<%= scope.lookupvar('::servername') %>'
+## Module:           '<%= scope.to_hash['module_name'] %>'
+#<% module_paths =  Puppet::Node::Environment.current[:modulepath].split(':').map{|i| File.expand_path(i) }.join("|") -%>
+## Template source:  'MODULES<%= template_source.gsub(Regexp.new("^#{module_paths}"),"") %>'
+######################################################
+
+## ConfigParser style config file, similar to ini files
+## http://docs.python.org/library/configparser.html
+##
+## Note that multiline values can be set by indenting subsequent lines
+## (which means you should not indent regular lines)
+
+[hub]
+## Basic options ##
+KojiDir = <%= @koji_filesystem_base %>
+DBName  = <%= @koji_database %>
+DBUser  = <%= @koji_database_owner %>
+DBHost  = <%= @koji_dbserver_real %>
+#
+# We are configured for password-less login to the local system
+# if this is unset, that is the assumed configuration
+#       DON'T DO THAT OK!!!
+#
+DBPass = <%= @koji_database_password %>
+
+##  SSL client certificate auth configuration  ##
+## the client username is the common name of the subject of their client certificate
+DNUsernameComponent = CN
+## separate multiple DNs with |
+ProxyDNs = C=US/ST=STATE/O=EXAMPLE/OU=BUSINESS UNIT/OU=koji-web/CN=<%= fqdn %>/emailAddress=<%= fqdn %>@<%= fqdn %> | C=US, ST=STATE, L=CITY, O=EXAMPLE, OU=BUSINESS UNIT, CN=<%= fqdn %>/emailAddress=sl-team@fnal.gov | /C=US/ST=STATE/O=EXAMPLE/OU=BUSINESS UNIT/OU=koji-web/CN=<%= fqdn %>/emailAddress=koji-web@<%= fqdn %>
+
+## end SSL client certificate auth configuration
+
+##  Other options  ##
+LoginCreatesUser = On
+KojiWebURL = https://<%= fqdn %>/koji
+# The domain name that will be appended to Koji usernames
+# when creating email notifications
+EmailDomain = <%= domain %>
+# whether to send the task owner and package owner email or not on success.  this still goes to watchers
+NotifyOnSuccess = True
+## Disables all notifications
+DisableNotifications = False
+
+# avoid un-necessary memory usage warnings
+MemoryWarnThreshold = 50000
+
+## Koji hub plugins
+## The path where plugins are found
+PluginPath = /usr/lib/koji-hub-plugins
+## A space-separated list of plugins to load
+Plugins = <%= @koji_hub_active_plugins.join(' ') %>
+
+## If KojiDebug is on, the hub will be /very/ verbose and will report exception
+## details to clients for anticipated errors (i.e. koji's own exceptions --
+## subclasses of koji.GenericError).
+# KojiDebug = On
+
+## Determines how much detail about exceptions is reported to the client (via faults)
+## Meaningful values:
+##   normal - a basic traceback (format_exception)
+##   extended - an extended traceback (format_exc_plus)
+##   anything else - no traceback, just the error message
+## The extended traceback is intended for debugging only and should NOT be
+## used in production, since it may contain sensitive information.
+KojiTraceback = normal
+
+## These options are intended for planned outages
+## If ServerOffline is True, the server will always report a ServerOffline fault (with
+## OfflineMessage as the fault string).
+ServerOffline = False
+OfflineMessage = This is a temporary outage while we resolve some problems
+## If LockOut is True, the server will report a ServerOffline fault for all non-admin
+## requests.
+LockOut = False
+
+# see http://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/koji_hub/templates/hub.conf.j2
+[policy]
+build_from_srpm =
+            has_perm admin :: allow
+            all :: deny
+build_from_repo_id =
+            has_perm admin :: allow
+            all :: deny
+package_list =
+            has_perm admin :: allow
+            all :: deny
+tag =
+<%- if @koji_hub_securebootchannel != '' -%>
+            has_perm admin && package kernel oracleasm pesign pesign-test-app efivar efibootmgr fwupdate gnu-efi shim grub2 *-release :: allow
+            package kernel oracleasm pesign pesign-test-app efivar efibootmgr fwupdate gnu-efi shim grub2 *-release :: deny
+<%- end -%>
+            all :: allow
+channel =
+            has req_channel :: req
+            is_child_task :: parent
+            method createrepo :: use createrepo
+            method appliance :: use image
+            method image :: use image
+            method livecd :: use image
+            method livemedia :: use image
+<%- if @koji_hub_securebootchannel != '' -%>
+            method build && source */kernel* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */*kmod* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */*oracle* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */*efi* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */grub2* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */shim* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */pesign* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */fwupdate* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+            method build && source */*-release* && has_perm admin :: use <%= @koji_hub_securebootchannel %>
+<%- end -%>
+            all :: use default
+vm =
+            has_perm admin win-admin :: allow
+            all :: deny
+

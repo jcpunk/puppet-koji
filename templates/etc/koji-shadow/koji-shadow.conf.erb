@@ -1,0 +1,20 @@
+#####################################################
+#### File managed with puppet                      ###
+#### Generated for <%= @fqdn %>
+######################################################
+## Served by:        '<%= scope.lookupvar('::servername') %>'
+## Module:           '<%= scope.to_hash['module_name'] %>'
+#<% module_paths =  Puppet::Node::Environment.current[:modulepath].split(':').map{|i| File.expand_path(i) }.join("|") -%>
+## Template source:  'MODULES<%= template_source.gsub(Regexp.new("^#{module_paths}"),"") %>'
+######################################################
+
+[main]
+server=http://localhost/kojihub/
+remote=http://<%= @fqdn %>/kojihub
+
+#certificate of the CA that issued the client certificate
+ca = /etc/pki/koji/ca_cert.crt
+
+#certificate of the CA that issued the HTTP server certificate
+serverca = /etc/pki/koji/ca_cert.crt
+

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+DAY=$(date +%a)
+
+mkdir -p /var/lib/pgsql/backups
+
+pg_dumpall | bzip2 >/var/lib/pgsql/backups/${DAY}.pgdumpall.bz2

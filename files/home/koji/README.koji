@@ -1,0 +1,153 @@
+OK, so you've had puppet load koji, now what?
+
+Good question!
+
+Let me tell you what all you've got and what you need to do from here.
+
+You will need to setup:
+  - users
+  - build hosts
+  - tags
+  - external repos
+
+Read this whole document before doing stuff!
+
+You've got /etc/pki/koji/
+  It is the CA recognized by koji.  There are a lot of random things in there.
+  But you care only about a few:
+
+  /etc/pki/koji/ca_cert.crt
+     - the koji CA public key
+  /etc/pki/koji/make_koji_service_cert.sh
+     - a script to make up any koji ssl key you want.
+     - it takes a -h for help info so read it
+  /etc/pki/koji/pems/*
+     - the make_koji_service_cert.sh will dump PEM files here
+       THEY INCLUDE THE SERVICE CERT PRIVATE KEY
+  /etc/pki/koji/pkcs12s/*
+     - the make_koji_service_cert.sh will dump pkcs12 files here
+       THEY INCLUDE THE SERVICE CERT PRIVATE KEY
+
+You've got /home/koji/bin/
+  This should be in your path and will include a helpful set of scripts
+  for setting up your koji environment.
+
+  /home/koji/bin/add_koji_server
+      - adds a koji builder to the recognized system list.
+        That system will need a PEM formatted cert on the box.
+        Just put it in /etc/kojid/<hostname>.pem, puppet has setup
+        the daemons to look there.
+     - it takes a -h for help info so read it
+  /home/koji/bin/add_koji_user
+     - adds a user to koji
+     - it takes a -h for help info so read it
+  /home/koji/bin/make_koji_initial_tags
+     - makes an initial tag set, but it is so generic as to work
+       on anything, so any macros or dist tags or whatever
+       are not in these tags.
+     - it takes a -h for help info so read it
+
+----------------------------------------------------------------------
+USERS:
+
+You've got the 'koji' unix account.  It has been configured as the koji-admin
+user.  So you can use it for the initial setup.
+
+Decide what 'root' should map to in koji.
+
+As root:
+ su - koji -c 'koji add-user my-team'
+ su - koji -c 'koji grant-permission admin my-team'
+ /etc/pki/koji/make_koji_service_cert.sh -c my-team
+ mkdir -p ~/.koji/
+ ln -s /etc/pki/koji/pems/my-team.pem ~/.koji/koji-user-cert.pem
+
+----------------------------------------------------------------------
+HOSTS:
+
+You've already got a host cert in /etc/pki/koji/pems/ for this host.
+So let us add it as a possible builder.
+
+As root:
+  # find number of CPUs
+  CPUS=$(cat /proc/cpuinfo |grep processor| wc -l)
+  /root/bin/add_koji_server -p $CPUS $(hostname --long)
+
+You can add other systems in much the same way.  And /root/bin/add_koji_server
+will make up the pem file for you automatically.
+
+You will need to restart kojid if it was already running.
+  service kojid restart
+
+----------------------------------------------------------------------
+TAGS and TARGETS:
+
+In koji tag inheritance can save you an amazing amount of time.
+The /root/bin/make_koji_initial_tags can create some tags for you
+to inherit that make it easy to create your own tags with some minor
+adjustments.
+
+These two commands will help you a million times:
+  koji list-tags
+  koji taginfo
+
+The main thing you must do is decide how the tags are going to work.
+Once you pick, changing can be a mess.
+
+For I rather like:
+
+My_Linux
+  -> 1.0
+    -> 1.0-build
+    -> 1.0-updates
+      -> 1.0-updates-build
+      -> 1.1
+        -> 1.1-build
+        -> 1.1-updates
+          -> 1.1-updates-build
+
+My_Linux-build
+  -> 1.0-build
+  -> 1.0-updates-build
+  -> 1.1-build
+  -> 1.1-updates-build
+
+And using the dynamic_disttag macro, but do what you want for your setup.
+You know what you expect to get out of koji, so make sure you've got it
+configured to get that.
+
+If you like the outlined tag hierarchy, you can use /root/bin/make_next_tag
+to build it.
+
+Your macros repo should be attached to My_Linux-build so it is
+inherited by everyone else automatically.
+
+----------------------------------------------------------------------
+REPOS:
+
+ Koji repos are very simple if you remember a few things:
+
+ PRIORITY IS KING, AND A LOW NUMBER IS BEST
+   A higher version in a high numbered priority repo will be skipped over.
+
+ REPODATA DOESN'T EXPIRE FOR REPOS, TAGS ARE IN CONTROL
+   If you want it updated you need to run koji regen-repo ${TAG}
+ 
+ RPMS IN A REPO CAN'T CHANGE
+   An rpm's checksum is stored forever, if you change it in a repo
+    that repo is now 'corrupted' and therefore worthless.
+
+ With all this in mind you may be tempted to have your top tag inherit
+ the rolling repo, but once you gut it for the next version things may
+ get all screwed up for everyone.
+
+ You will want to run:
+
+ koji add-external-repo --help
+
+ Example:
+
+  koji add-external-repo sl6x 'http://ftp.scientificlinux.org/linux/scientific/6x/$arch/os/'
+
+  NOTE: $arch NOT $basearch
+

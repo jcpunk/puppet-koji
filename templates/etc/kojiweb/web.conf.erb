@@ -1,0 +1,31 @@
+#####################################################
+#### File managed with puppet                      ###
+#### Generated for <%= @fqdn %>
+######################################################
+## Served by:        '<%= scope.lookupvar('::servername') %>'
+## Module:           '<%= scope.to_hash['module_name'] %>'
+#<% module_paths =  Puppet::Node::Environment.current[:modulepath].split(':').map{|i| File.expand_path(i) }.join("|") -%>
+## Template source:  'MODULES<%= template_source.gsub(Regexp.new("^#{module_paths}"),"") %>'
+######################################################
+
+[web]
+SiteName = <%= @fqdn %>
+KojiTheme = <%= @fqdn %>
+
+# Necessary urls
+KojiHubURL = https://<%= @koji_hubserver %>/kojihub
+KojiFilesURL = http://<%= @fqdn %>/kojifiles
+
+## SSL authentication options
+WebCert = /etc/kojiweb/<%= @fqdn %>_koji-web.pem
+ClientCA = /etc/pki/koji/ca_cert.crt
+KojiHubCA = /etc/pki/koji/ca_cert.crt
+ServerHubCA = /etc/pki/koji/ca_cert.crt
+
+LoginTimeout = 72
+
+# This must be set before deployment
+Secret = <%= @koji_web_secret %>
+
+LibPath = /usr/share/koji-web/lib
+
