@@ -6,6 +6,7 @@ class koji::builder (
   $mock_cachedir            = $koji::mock_cachedir,
   $mock_builddir            = $koji::mock_builddir,
   $mock_builduser           = $koji::mock_builduser,
+  $mock_buildgroup          = $koji::mock_buildgroup,
   $mock_vendor              = $koji::mock_vendor,
   $mock_packager            = $koji::mock_packager,
   $mock_distribution        = $koji::mock_distribution,
@@ -20,6 +21,7 @@ class koji::builder (
   validate_absolute_path($mock_cachedir)
   validate_absolute_path($mock_builddir)
   validate_string($mock_builduser)
+  validate_string($mock_buildgroup)
   validate_string($mock_vendor)
   validate_string($mock_packager)
   validate_string($mock_distribution)
@@ -64,7 +66,7 @@ class koji::builder (
     require => Package[$koji_builder_packages],
   }
 
-  file {$mock_plugin_path:
+  file {$::mock_plugin_path:
     source  => "puppet:///modules/koji/mockbuild/plugins/${::content_view}",
     recurse => true,
     require => Package[$koji_builder_packages],

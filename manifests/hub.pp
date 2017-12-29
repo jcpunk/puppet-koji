@@ -59,7 +59,7 @@ class koji::hub (
     ensure  => 'present',
     owner   => 'root',
     group   => 'root',
-    mode    => '644',
+    mode    => '0644',
     content => template('koji/etc/exports.d/export.erb'),
   }
 
@@ -98,7 +98,7 @@ class koji::hub (
     mode    => '0640',
     replace => true,
     notify  => Service['httpd'],
-    source  => "puppet:///modules/koji/etc/koji-hub/plugins/${fqdn}",
+    source  => "puppet:///modules/koji/etc/koji-hub/plugins/${::fqdn}",
     require => Package[$koji_hub_packages],
     recurse => true,
   }
@@ -110,7 +110,7 @@ class koji::hub (
     mode    => '0640',
     replace => true,
     notify  => Service['httpd'],
-    source  => "puppet:///modules/koji/usr/lib/koji-hub/plugins/${fqdn}",
+    source  => "puppet:///modules/koji/usr/lib/koji-hub/plugins/${::fqdn}",
     require => Package[$koji_hub_packages],
     recurse => true,
   }
